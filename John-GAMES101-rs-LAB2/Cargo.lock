@@ -3,6 +3,14 @@
 version = 3
 
 [[package]]
+name = "Zhang-Tongcheng"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+ "opencv",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -73,14 +81,6 @@ name = "dunce"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bd4b30a6560bbd9b4620f4de34c3f14f60848e58a9b7216801afcb4c7b31c3c"
-
-[[package]]
-name = "games101"
-version = "0.1.0"
-dependencies = [
- "nalgebra",
- "opencv",
-]
 
 [[package]]
 name = "glob"
