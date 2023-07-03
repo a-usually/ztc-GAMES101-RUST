@@ -9,6 +9,7 @@ use opencv::highgui::{imshow, wait_key};
 use opencv::imgcodecs::imwrite;
 use crate::rasterizer::{Primitive, Rasterizer};
 use utils::*;
+use std::thread;
 
 fn main() {
     let mut angle = 0.0;
