@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use nalgebra::{Matrix4, Vector3, Vector4};
 use crate::triangle::Triangle;
 
+const INFINITY: f64 = f64::INFINITY;
+
 #[allow(dead_code)]
 pub enum Buffer {
     Color,
@@ -50,7 +52,7 @@ impl Rasterizer {
         r.width = w;
         r.height = h;
         r.frame_buf.resize((w * h) as usize, Vector3::zeros());
-        r.depth_buf.resize((w * h) as usize, 0.0);
+        r.depth_buf.resize((w * h) as usize, INFINITY);
         r
     }
 
@@ -158,12 +160,20 @@ impl Rasterizer {
 
     pub fn rasterize_triangle(&mut self, t: &Triangle) {
         /*  implement your code here  */
-        
+        for x in 0..= self.width as i32 - 1 {
+            for y in 0..= self.height as i32 - 1 {
+                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[(x * self.width as i32 + y) as usize]) {
+                    self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
+                    self.depth_buf[(x * self.width as i32 + y) as usize] = t.v[0].z;
+                }
+            }
+        }
     }
 
     pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
         &self.frame_buf
     }
+
 }
 
 fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
@@ -172,6 +182,22 @@ fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
 
 fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     /*  implement your code here  */
+    let mut v_0 = v.clone();
+
+    //make sure it is clockwise
+    if (v_0[1].x - v_0[0].x) * (v_0[2].y - v_0[0].y) - (v_0[1].y - v_0[0].y)*(v_0[2].x - v_0[0].x) < 0.0 {
+        v_0[0] = v[1].clone();
+        v_0[1] = v[0].clone();
+    }
+
+    //compute the cross product
+    let v0_v1 = (v_0[1].x - v_0[0].x) * (y - v_0[0].y) - (v_0[1].y - v_0[0].y) * (x - v_0[0].x);
+	let v1_v2 = (v_0[2].x - v_0[1].x) * (y - v_0[1].y) - (v_0[2].y - v_0[1].y) * (x - v_0[1].x);
+	let v2_v0 = (v_0[0].x - v_0[2].x) * (y - v_0[2].y) - (v_0[0].y - v_0[2].y) * (x - v_0[2].x);
+
+	if v0_v1 > 0.0 && v1_v2 > 0.0 && v2_v0 > 0.0 {
+        return true;
+    }
 
     false
 }
