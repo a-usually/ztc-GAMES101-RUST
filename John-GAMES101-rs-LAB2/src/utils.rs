@@ -65,7 +65,7 @@ pub(crate) fn get_model_matrix(rotation_angle: f64) -> Matrix4<f64> {
 pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64, z_far: f64) -> Matrix4<f64> {
     let mut projection: Matrix4<f64> = Matrix4::identity();
     /*  implement your code here  */
-    let t = z_near * (eye_fov / 2.0).tan();
+    let t = -z_near * (eye_fov / 2.0).tan();
     let r = t * aspect_ratio;
     let l = -r;
     let b = -t;
