@@ -64,7 +64,7 @@ pub(crate) fn get_model_matrix(rotation_angle: f64) -> Matrix4<f64> {
 pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64, z_far: f64) -> Matrix4<f64> {
     let mut projection: Matrix4<f64> = Matrix4::identity();
     /*  implement your code here  */
-    let t = z_near * (eye_fov / 2.0).tan();
+    let t = -z_near * (eye_fov / 2.0).tan();
     let r = t * aspect_ratio;
     let l = -r;
     let b = -t;
@@ -135,58 +135,6 @@ pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64
     projection = ortho1 * ortho2 * persp;
 
     projection
-}
-
-pub fn get_rotation_0(axis: Vector3<f64>) -> Matrix4<f64> {
-    let angle: f64 = 0.0;
-    let mut model:Matrix4<f64> = Matrix4::identity();
-
-    let mut vec_n:Matrix4<f64> = Matrix4::identity();
-    vec_n[(0, 0)] = axis.x * axis.x;
-    vec_n[(0, 1)] = axis.x * axis.y;
-    vec_n[(0, 2)] = axis.x * axis.z;
-    vec_n[(0, 3)] = 0.0;
-
-    vec_n[(1, 0)] = axis.x * axis.y;
-    vec_n[(1, 1)] = axis.y * axis.y;
-    vec_n[(1, 2)] = axis.y * axis.z;
-    vec_n[(1, 3)] = 0.0;
-
-    vec_n[(2, 0)] = axis.z * axis.x;
-    vec_n[(2, 1)] = axis.z * axis.y;
-    vec_n[(2, 2)] = axis.z * axis.z;
-    vec_n[(2, 3)] = 0.0;
-//add
-    vec_n[(3, 0)] = 0.0;
-    vec_n[(3, 1)] = 0.0;
-    vec_n[(3, 2)] = 0.0;
-    vec_n[(3, 3)] = 1.0;
-
-    let mut sub:Matrix4<f64> = Matrix4::identity();
-
-    sub[(0, 0)] = 0.0;
-    sub[(0, 1)] = -axis.z;
-    sub[(0, 2)] = axis.y;
-    sub[(0, 3)] = 0.0;
-
-    sub[(1, 0)] = axis.z;
-    sub[(1, 1)] = 0.0;
-    sub[(1, 2)] = -axis.x;
-    sub[(1, 3)] = 0.0;
-
-    sub[(2, 0)] = -axis.y;
-    sub[(2, 1)] = axis.x;
-    sub[(2, 2)] = 0.0;
-    sub[(2, 3)] = 0.0;
-
-    sub[(3, 0)] = 0.0;
-    sub[(3, 1)] = 0.0;
-    sub[(3, 2)] = 0.0;
-    sub[(3, 3)] = 0.0;
-
-    model = model * angle.to_radians().cos() + vec_n * (1.0 - angle.to_radians().cos()) + sub * angle.to_radians().sin();
-
-    model
 }
 
 pub fn get_rotation(axis: Vector3<f64>, angle: f64) -> Matrix4<f64> {
