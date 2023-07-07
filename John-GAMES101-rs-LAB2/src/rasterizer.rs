@@ -187,27 +187,12 @@ impl Rasterizer {
             t.set_color(2, col_z[0], col_z[1], col_z[2]);
 
             self.rasterize_triangle(&t);
-        }
-    }
 
-    pub fn rasterize_triangle(&mut self, t: &Triangle) {
-        let abs_lumn = 0.005;
-        let relative_lumn = 0.001;
-        let lumn = Vector3::new(0.299, 0.587, 0.114);//change function
-
-        /*  implement your code here  */
-        for x in 0..= self.width as i32 - 1 {
-            for y in 0..= self.height as i32 - 1 {
-                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
-                    let temp = self.get_index1(x as usize, y as usize).clone();
-                    self.depth_buf[temp] = t.v[0].z;
-                    self.frame_buf_0[temp] = t.get_color().clone();
-                }
-            }
-        }
-
-        for x in 0..= self.width as i32 - 1 {
-            for y in 0..= self.height as i32 - 1 {
+            let abs_lumn = 0.005;
+            let relative_lumn = 0.001;
+            let lumn = Vector3::new(0.299, 0.587, 0.114);//change function
+            for x in 0..= self.width as i32 - 1 {
+                for y in 0..= self.height as i32 - 1 {
                     let temp = self.get_index1(x as usize, y as usize).clone();
                     let temp1 = if y + 1 <= self.height as i32 - 1 {
                         self.get_index1(x as usize, (y as f64 + 1.0) as usize).clone()
@@ -298,77 +283,192 @@ impl Rasterizer {
                         self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
                         continue;
                     }
+                }
+            }
+
+        }
+    }
+
+    pub fn rasterize_triangle(&mut self, t: &Triangle) {
+        let abs_lumn = 0.005;
+        let relative_lumn = 0.001;
+        let lumn = Vector3::new(0.299, 0.587, 0.114);//change function
+
+        /*  implement your code here  */
+        for x in 0..= self.width as i32 - 1 {
+            for y in 0..= self.height as i32 - 1 {
+                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
+                    let temp = self.get_index1(x as usize, y as usize).clone();
+                    self.depth_buf[temp] = t.v[0].z;
+                    self.frame_buf_0[temp] = t.get_color().clone();
+                }
             }
         }
 
         // for x in 0..= self.width as i32 - 1 {
         //     for y in 0..= self.height as i32 - 1 {
-        //         let temp_0 = self.get_index1(x as usize, y as usize).clone();
-        //         if inside_triangle(x as f64 + 0.25, y as f64 + 0.25, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2) as usize, (y * 2) as usize)]) {
-        //             let temp = self.get_index2((x * 2) as usize, (y * 2) as usize).clone();
-        //             self.depth_sample[temp] = t.v[0].z;
-        //             self.frame_sample[temp] = t.get_color();
-        //             self.num_count[temp_0] += 1;
-        //         }
+                    // let temp = self.get_index1(x as usize, y as usize).clone();
+                    // let temp1 = if y + 1 <= self.height as i32 - 1 {
+                    //     self.get_index1(x as usize, (y as f64 + 1.0) as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-        //         if inside_triangle(x as f64 + 0.75, y as f64 + 0.25, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2 + 1) as usize, (y * 2) as usize)]) {
-        //             let temp = self.get_index2((x * 2 + 1) as usize, (y * 2) as usize).clone();
-        //             self.depth_sample[temp] = t.v[0].z;
-        //             self.frame_sample[temp] = t.get_color();
-        //             self.num_count[temp_0] += 1;
-        //         }
+                    // let temp2 = if x + 1 <= self.width as i32 -1 {
+                    //     self.get_index1((x as f64 + 1.0) as usize, y as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-        //         if inside_triangle(x as f64 + 0.25, y as f64 + 0.75, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2) as usize, (y * 2 + 1) as usize)]) {
-        //             let temp = self.get_index2((x * 2) as usize, (y * 2 + 1) as usize).clone();
-        //             self.depth_sample[temp] = t.v[0].z;
-        //             self.frame_sample[temp] = t.get_color();
-        //             self.num_count[temp_0] += 1;
-        //         }
+                    // let temp3 = if y >= 0 {
+                    //     self.get_index1((x + 1) as usize, (y + 1) as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-        //         if inside_triangle(x as f64 + 0.75, y as f64 + 0.75, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize)]) {
-        //             let temp = self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize).clone();
-        //             self.depth_sample[temp] = t.v[0].z;
-        //             self.frame_sample[temp] = t.get_color();
-        //             self.num_count[temp_0] += 1;
-        //         }
+                    // let temp4 = if x  >= 0 {
+                    //     self.get_index1(x as usize, y as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
+                    //coordinate
+
+                    // let se_rgb = self.frame_buf_0[temp1];
+                    // let nw_rgb = self.frame_buf_0[temp2];
+                    // let ne_rgb = self.frame_buf_0[temp3];
+                    // let sw_rgb = self.frame_buf_0[temp4];
+
+                    // let m_rgb = self.frame_buf_0[temp];
+
+                    // let ne_lumn:f64 = ne_rgb.dot(&lumn);
+                    // let nw_lumn:f64 = nw_rgb.dot(&lumn);
+                    // let se_lumn:f64 = se_rgb.dot(&lumn);
+                    // let sw_lumn:f64 = sw_rgb.dot(&lumn);
+                    // let m_lumn:f64 = m_rgb.dot(&lumn);
+
+                    // let lumnmin = min(n_lumn, min(e_lumn, min(s_lumn, w_lumn)));
+                    // let lumnmax = max(nw_lumn, max(ne_lumn, max(se_lumn, sw_lumn)));
+                    // let lumncompare = lumnmax - lumnmin;
+                    // let isedge:bool = lumncompare > max(abs_lumn, relative_lumn * lumnmax);//the max limit
+
+                    // if isedge {
+                        //println!("ss");
+                        // let lumn_grad_n = n_lumn - m_lumn;
+                        // let lumn_grad_s = s_lumn - m_lumn;
+                        // let lumn_grad_e = e_lumn - m_lumn;
+                        // let lumn_grad_w = w_lumn - m_lumn;//the grad
+                        // let lumn_grad_1 = (lumn_grad_n + lumn_grad_s).abs();
+                        // let lumn_grad_2 = (lumn_grad_e + lumn_grad_w).abs();
+                        // let ishorz = lumn_grad_1 > lumn_grad_2;
+
+                    //     let mut normal = Vector2::new(0.0, 0.0);
+
+                    //     if ishorz {
+                    //         normal.y = (lumn_grad_n.abs() - lumn_grad_s.abs()).signum();
+                    //     }
+                    //     else {
+                    //         normal.x = (lumn_grad_e.abs() - lumn_grad_w.abs()).signum();
+                    //     }
+
+                    //     let lumn_ave = (e_lumn + n_lumn + w_lumn + s_lumn) * 0.25;
+                    //     let lumn_ml = (m_lumn - lumn_ave).abs();
+
+                    //     if lumn_ml == 0.0 {
+                    //         self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //         continue;
+                    //     }
+                    //     else {
+                    //         let modify = lumn_ml / lumncompare;
+                    //         let x_0 = min(x as f64 + modify * normal.x, self.width as f64 - 1.0) as usize;
+                    //         let y_0 = min(y as f64 + modify * normal.y, self.height as f64 -1.0) as usize;
+                    //         let temp_00 = self.get_index1(x_0, y_0);
+                    //         self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp_00].clone());
+                    //     }
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue;
+                    // }
+
+                    // let mut dir = Vector2::new(0.0, 0.0);
+                    // dir.x = sw_lumn + se_lumn - nw_lumn - ne_lumn;
+                    // dir.y = nw_lumn + sw_lumn - ne_lumn - se_lumn;
         //     }
         // }
 
-        // for x in 0..=self.width as i32 - 1 {
-        //     for y in 0..=self.height as i32 - 1 {
-        //         let temp = self.get_index1(x as usize, y as usize).clone();
-        //         if self.num_count[temp] > 0 && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
-        //             self.depth_buf[temp] = t.v[0].z;
-        //             let mut color_temp = Vector3::new(0.0, 0.0, 0.0);
-        //             let temp1 = self.get_index2((x * 2) as usize, (y * 2) as usize).clone();
-        //             let temp2 = self.get_index2((x * 2 + 1) as usize, (y * 2) as usize).clone();
-        //             let temp3 = self.get_index2((x * 2) as usize, (y * 2 + 1) as usize).clone();
-        //             let temp4 = self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize).clone();
+    //     for x in 0..= self.width as i32 - 1 {
+    //         for y in 0..= self.height as i32 - 1 {
+    //             let temp_0 = self.get_index1(x as usize, y as usize).clone();
+    //             if inside_triangle(x as f64 + 0.25, y as f64 + 0.25, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2) as usize, (y * 2) as usize)]) {
+    //                 let temp = self.get_index2((x * 2) as usize, (y * 2) as usize).clone();
+    //                 self.depth_sample[temp] = t.v[0].z;
+    //                 self.frame_sample[temp] = t.get_color();
+    //                 self.num_count[temp_0] += 1;
+    //             }
 
-        //             color_temp.x = (self.frame_sample[temp1].x + self.frame_sample[temp2].x + self.frame_sample[temp3].x + self.frame_sample[temp4].x) / 4.0;
-        //             color_temp.y = (self.frame_sample[temp1].y + self.frame_sample[temp2].y + self.frame_sample[temp3].y + self.frame_sample[temp4].y) / 4.0;
-        //             color_temp.z = (self.frame_sample[temp1].z + self.frame_sample[temp2].z + self.frame_sample[temp3].z + self.frame_sample[temp4].z) / 4.0;
+    //             if inside_triangle(x as f64 + 0.75, y as f64 + 0.25, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2 + 1) as usize, (y * 2) as usize)]) {
+    //                 let temp = self.get_index2((x * 2 + 1) as usize, (y * 2) as usize).clone();
+    //                 self.depth_sample[temp] = t.v[0].z;
+    //                 self.frame_sample[temp] = t.get_color();
+    //                 self.num_count[temp_0] += 1;
+    //             }
 
-        //             self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &color_temp);
-        //         }
-        //     }
-        // }
+    //             if inside_triangle(x as f64 + 0.25, y as f64 + 0.75, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2) as usize, (y * 2 + 1) as usize)]) {
+    //                 let temp = self.get_index2((x * 2) as usize, (y * 2 + 1) as usize).clone();
+    //                 self.depth_sample[temp] = t.v[0].z;
+    //                 self.frame_sample[temp] = t.get_color();
+    //                 self.num_count[temp_0] += 1;
+    //             }
 
+    //             if inside_triangle(x as f64 + 0.75, y as f64 + 0.75, &t.v) && (t.v[0].z < self.depth_sample[self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize)]) {
+    //                 let temp = self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize).clone();
+    //                 self.depth_sample[temp] = t.v[0].z;
+    //                 self.frame_sample[temp] = t.get_color();
+    //                 self.num_count[temp_0] += 1;
+    //             }
+    //         }
+    //     }
+
+    //     for x in 0..=self.width as i32 - 1 {
+    //         for y in 0..=self.height as i32 - 1 {
+    //             let temp = self.get_index1(x as usize, y as usize).clone();
+    //             if self.num_count[temp] > 0 && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
+    //                 self.depth_buf[temp] = t.v[0].z;
+    //                 let mut color_temp = Vector3::new(0.0, 0.0, 0.0);
+    //                 let temp1 = self.get_index2((x * 2) as usize, (y * 2) as usize).clone();
+    //                 let temp2 = self.get_index2((x * 2 + 1) as usize, (y * 2) as usize).clone();
+    //                 let temp3 = self.get_index2((x * 2) as usize, (y * 2 + 1) as usize).clone();
+    //                 let temp4 = self.get_index2((x * 2 + 1) as usize, (y * 2 + 1) as usize).clone();
+
+    //                 color_temp.x = (self.frame_sample[temp1].x + self.frame_sample[temp2].x + self.frame_sample[temp3].x + self.frame_sample[temp4].x) / 4.0;
+    //                 color_temp.y = (self.frame_sample[temp1].y + self.frame_sample[temp2].y + self.frame_sample[temp3].y + self.frame_sample[temp4].y) / 4.0;
+    //                 color_temp.z = (self.frame_sample[temp1].z + self.frame_sample[temp2].z + self.frame_sample[temp3].z + self.frame_sample[temp4].z) / 4.0;
+
+    //                 self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &color_temp);
+    //             }
+    //         }
+    //     }
     }
 
     pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
         &self.frame_buf
     }
-
 }
+    fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
+        Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
+    }
 
-fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
-    Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
-}
-
-fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
-    /*  implement your code here  */
-    let mut v_0 = v.clone();
+    fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
+        /*  implement your code here  */
+        let mut v_0 = v.clone();
 
     //make sure it is clockwise
     if (v_0[1].x - v_0[0].x) * (v_0[2].y - v_0[0].y) - (v_0[1].y - v_0[0].y)*(v_0[2].x - v_0[0].x) < 0.0 {
@@ -397,3 +497,4 @@ fn compute_barycentric2d(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f6
         / (v[2].x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * v[2].y + v[0].x * v[1].y - v[1].x * v[0].y);
     (c1, c2, c3)
 }
+
