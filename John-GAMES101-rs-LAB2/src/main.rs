@@ -45,7 +45,10 @@ fn main() -> Result<()> {
         r.set_model(get_model_matrix(0.0));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45.0, 1.0, 0.1, 50.0));
+        //r.set_jitter(get_jitter(45.0, 1.0, 0.1, 50.0));
+        //if frame_count >= 1 {
         r.draw(pos_id, ind_id, col_id, Primitive::Triangle);
+        //}
 
         let frame_buffer = r.frame_buffer();
         let image = frame_buffer2cv_mat(frame_buffer);
@@ -54,7 +57,7 @@ fn main() -> Result<()> {
         k = wait_key(2000).unwrap();
         println!("frame count: {}", frame_count);
         frame_count += 1;
-    }
+    };
 
     Ok(())
 }

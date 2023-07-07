@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-
-use nalgebra::{Matrix4, Vector3, Vector4};
+use crate::utils::{min, max};
+use nalgebra::{Matrix4, Vector3, Vector4, Vector2};
 use crate::triangle::Triangle;
 
 const INFINITY: f64 = f64::INFINITY;
@@ -23,11 +23,15 @@ pub struct Rasterizer {
     model: Matrix4<f64>,
     view: Matrix4<f64>,
     projection: Matrix4<f64>,
+    jitter: Matrix4<f64>,
     pos_buf: HashMap<usize, Vec<Vector3<f64>>>,
     ind_buf: HashMap<usize, Vec<Vector3<usize>>>,
     col_buf: HashMap<usize, Vec<Vector3<f64>>>,
 
     frame_buf: Vec<Vector3<f64>>,
+    pre_frame_buf: Vec<Vector3<f64>>,
+    frame_buf_0: Vec<Vector3<f64>>,
+
     depth_buf: Vec<f64>,
     /*  You may need to uncomment here to implement the MSAA method  */
     frame_sample: Vec<Vector3<f64>>,
@@ -53,8 +57,11 @@ impl Rasterizer {
         r.width = w;
         r.height = h;
         r.frame_buf.resize((w * h) as usize, Vector3::zeros());
+        r.frame_buf_0.resize((w * h) as usize, Vector3::zeros());
+
         r.depth_buf.resize((w * h) as usize, INFINITY);
         r.frame_sample.resize((w * h * 4) as usize, Vector3::zeros());
+        r.pre_frame_buf.resize((w * h) as usize, Vector3::zeros());
         r.depth_sample.resize((w * h * 4) as usize, INFINITY);
         r.num_count.resize((w * h) as usize, 0);
         r
@@ -69,14 +76,26 @@ impl Rasterizer {
     }
 
     fn set_pixel(&mut self, point: &Vector3<f64>, color: &Vector3<f64>) {
+        let alpha = 0.05;
         let ind = (self.height as f64 - 1.0 - point.y) * self.width as f64 + point.x;
         self.frame_buf[ind as usize] = *color;
+        // //no color
+        // if self.frame_buf[ind as usize].x == 0.0 && self.frame_buf[ind as usize].y == 0.0 && self.frame_buf[ind as usize].z == 0.0 {
+        //     self.frame_buf[ind as usize] = *color;
+        // }
+
+        // //have set color
+        // else {
+        //     self.frame_buf[ind as usize] = self.pre_frame_buf[ind as usize] * (1.0 - alpha) + color * alpha;
+        // }
+        // self.pre_frame_buf[ind as usize] = self.frame_buf[ind as usize];
     }
 
     pub fn clear(&mut self, buff: Buffer) {
         match buff {
             Buffer::Color => {
                 self.frame_buf.fill(Vector3::new(0.0, 0.0, 0.0));
+                self.frame_buf_0.fill(Vector3::new(0.0, 0.0, 0.0));
             }
             Buffer::Depth => {
                 self.depth_buf.fill(f64::MAX);
@@ -98,6 +117,10 @@ impl Rasterizer {
 
     pub fn set_projection(&mut self, projection: Matrix4<f64>) {
         self.projection = projection;
+    }
+
+    pub fn set_jitter(&mut self, jitter: Matrix4<f64>) {
+        self.jitter = jitter;
     }
 
     fn get_next_id(&mut self) -> usize {
@@ -133,10 +156,11 @@ impl Rasterizer {
         let f2 = (50.0 + 0.1) / 2.0;
 
         let mvp = self.projection * self.view * self.model;
+        //let mvp = self.jitter * self.view * self.model;//TAA 
 
         for i in ind {
             let mut t = Triangle::new();
-            let mut v =
+            let mut v: Vec<nalgebra::Matrix<f64, nalgebra::Const<4>, nalgebra::Const<1>, nalgebra::ArrayStorage<f64, 4, 1>>> =
                 vec![mvp * to_vec4(buf[i[0]], Some(1.0)), // homogeneous coordinates
                      mvp * to_vec4(buf[i[1]], Some(1.0)), 
                      mvp * to_vec4(buf[i[2]], Some(1.0))];
@@ -167,31 +191,115 @@ impl Rasterizer {
     }
 
     pub fn rasterize_triangle(&mut self, t: &Triangle) {
+        let abs_lumn = 0.005;
+        let relative_lumn = 0.001;
+        let lumn = Vector3::new(0.299, 0.587, 0.114);//change function
+
         /*  implement your code here  */
         for x in 0..= self.width as i32 - 1 {
             for y in 0..= self.height as i32 - 1 {
                 if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
-                    self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
                     let temp = self.get_index1(x as usize, y as usize).clone();
                     self.depth_buf[temp] = t.v[0].z;
+                    self.frame_buf_0[temp] = t.get_color().clone();
                 }
             }
         }
-        // for x in 0..= self.width as i32 - 1 {
-        //     for y in 0..= self.height as i32 - 1 {
-        //         if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[(x * self.width as i32 + y) as usize]) {
-        //             self.frame_buf[(x * self.width as i32 + y) as usize] = t.get_color();
-        //             self.depth_buf[(x * self.width as i32 + y) as usize] = t.v[0].z;
-        //         }
-        //     }
-        // }
-        // for x in 0..= self.width as i32 - 1 {
-        //     for y in 0..= self.height as i32 - 1 {
-        //         if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[(x * self.width as i32 + y) as usize]) {
-        //             self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf[(x * self.width as i32 + y) as usize].clone());
-        //         }
-        //     }
-        // }
+
+        for x in 0..= self.width as i32 - 1 {
+            for y in 0..= self.height as i32 - 1 {
+                    let temp = self.get_index1(x as usize, y as usize).clone();
+                    let temp1 = if y + 1 <= self.height as i32 - 1 {
+                        self.get_index1(x as usize, (y as f64 + 1.0) as usize).clone()
+                    }
+                    else {
+                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                        continue
+                    };
+
+                    let temp2 = if x + 1 <= self.width as i32 -1 {
+                        self.get_index1((x as f64 + 1.0) as usize, y as usize).clone()
+                    }
+                    else {
+                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                        continue
+                    };
+
+                    let temp3 = if y - 1 >= 0 {
+                        self.get_index1(x as usize, (y as f64 - 1.0) as usize).clone()
+                    }
+                    else {
+                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                        continue
+                    };
+
+                    let temp4 = if x - 1 >= 0 {
+                        self.get_index1((x as f64 - 1.0) as usize, y as usize).clone()
+                    }
+                    else {
+                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                        continue
+                    };
+                    //coordinate
+
+                    let n_rgb = self.frame_buf_0[temp1];
+                    let e_rgb = self.frame_buf_0[temp2];
+                    let s_rgb = self.frame_buf_0[temp3];
+                    let w_rgb = self.frame_buf_0[temp4];
+
+                    let m_rgb = self.frame_buf_0[temp];
+
+                    let n_lumn:f64 = n_rgb.dot(&lumn);
+                    let e_lumn:f64 = e_rgb.dot(&lumn);
+                    let s_lumn:f64 = s_rgb.dot(&lumn);
+                    let w_lumn:f64 = w_rgb.dot(&lumn);
+                    let m_lumn:f64 = m_rgb.dot(&lumn);
+
+                    let lumnmin = min(n_lumn, min(e_lumn, min(s_lumn, w_lumn)));
+                    let lumnmax = max(n_lumn, max(e_lumn, max(s_lumn, w_lumn)));
+                    let lumncompare = lumnmax - lumnmin;
+                    let isedge:bool = lumncompare > max(abs_lumn, relative_lumn * lumnmax);//the max limit
+
+                    if isedge {
+                        //println!("ss");
+                        let lumn_grad_n = n_lumn - m_lumn;
+                        let lumn_grad_s = s_lumn - m_lumn;
+                        let lumn_grad_e = e_lumn - m_lumn;
+                        let lumn_grad_w = w_lumn - m_lumn;//the grad
+                        let lumn_grad_1 = (lumn_grad_n + lumn_grad_s).abs();
+                        let lumn_grad_2 = (lumn_grad_e + lumn_grad_w).abs();
+                        let ishorz = lumn_grad_1 > lumn_grad_2;
+
+                        let mut normal = Vector2::new(0.0, 0.0);
+
+                        if ishorz {
+                            normal.y = (lumn_grad_n.abs() - lumn_grad_s.abs()).signum();
+                        }
+                        else {
+                            normal.x = (lumn_grad_e.abs() - lumn_grad_w.abs()).signum();
+                        }
+
+                        let lumn_ave = (e_lumn + n_lumn + w_lumn + s_lumn) * 0.25;
+                        let lumn_ml = (m_lumn - lumn_ave).abs();
+
+                        if lumn_ml == 0.0 {
+                            self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                            continue;
+                        }
+                        else {
+                            let modify = lumn_ml / lumncompare;
+                            let x_0 = min(x as f64 + modify * normal.x, self.width as f64 - 1.0) as usize;
+                            let y_0 = min(y as f64 + modify * normal.y, self.height as f64 -1.0) as usize;
+                            let temp_00 = self.get_index1(x_0, y_0);
+                            self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp_00].clone());
+                        }
+                    }
+                    else {
+                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                        continue;
+                    }
+            }
+        }
 
         // for x in 0..= self.width as i32 - 1 {
         //     for y in 0..= self.height as i32 - 1 {

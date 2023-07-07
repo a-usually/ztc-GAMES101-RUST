@@ -1,9 +1,13 @@
 use std::os::raw::c_void;
-use nalgebra::{Matrix4, Vector3};
+use nalgebra::{Matrix4, Vector3, Vector2};
 use opencv::core::{Mat, MatTraitConst};
 use opencv::imgproc::{COLOR_RGB2BGR, cvt_color};
+pub use std::sync::atomic::AtomicU64;
+pub use std::sync::atomic::Ordering;
 
 pub type V3d = Vector3<f64>;
+
+static POSITION: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) fn get_view_matrix(eye_pos: V3d) -> Matrix4<f64> {
     let mut view: Matrix4<f64> = Matrix4::identity();
@@ -138,6 +142,106 @@ pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64
     projection
 }
 
+pub fn get_jitter(eye_fov: f64, aspect_ratio: f64, z_near: f64, z_far: f64) -> Matrix4<f64> {
+    //make sure a loop
+    let offsetval = POSITION.load(Ordering::SeqCst);
+    if offsetval < 7 {
+        POSITION.fetch_add(1, Ordering::SeqCst); 
+    }
+    else {
+        POSITION.fetch_sub(7, Ordering::SeqCst);
+    }
+
+    let mut jitter: Matrix4<f64> = Matrix4::identity();
+    let halton = [
+        Vector2::new(0.0, 1.0 / 3.0), 
+        Vector2::new(-0.5, 1.0 / 3.0), 
+        Vector2::new(0.5, -7.0 / 9.0),
+        Vector2::new(-0.75, -1.0 / 9.0),
+        Vector2::new(0.25, 5.0 / 9.0),
+        Vector2::new(-0.25, -5.0 / 9.0),
+        Vector2::new(0.75, 1.0 / 9.0),
+        Vector2::new(-7.0 / 8.0, 7.0 / 9.0)];
+    /*  implement your code here  */
+    let t = -z_near * (eye_fov / 2.0).tan();
+    let r = t * aspect_ratio;
+    let l = -r;
+    let b = -t;
+
+    let delta_width = 1.0 / (2.0 * r);
+    let delta_height = 1.0 / (2.0 * b);
+
+    let mut persp: Matrix4<f64> = Matrix4::identity();
+    persp[(0, 0)] = z_near;
+    persp[(0, 1)] = 0.0;
+    persp[(0, 2)] = 0.0;
+    persp[(0, 3)] = 0.0;
+
+    persp[(1, 0)] = 0.0;
+    persp[(1, 1)] = z_near;
+    persp[(1, 2)] = 0.0;
+    persp[(1, 3)] = 0.0;
+
+    persp[(2, 0)] = 0.0;
+    persp[(2, 1)] = 0.0;
+    persp[(2, 2)] = z_near + z_far;
+    persp[(2, 3)] = -z_far * z_near;
+
+    persp[(3, 0)] = 0.0;
+    persp[(3, 1)] = 0.0;
+    persp[(3, 2)] = 1.0;
+    persp[(3, 3)] = 0.0;
+
+    let mut ortho1: Matrix4<f64> = Matrix4::identity();
+    ortho1[(0, 0)] = 2.0 / (r - l);
+    ortho1[(0, 1)] = 0.0;
+    ortho1[(0, 2)] = 0.0;
+    ortho1[(0, 3)] = 0.0;
+
+    ortho1[(1, 0)] = 0.0;
+    ortho1[(1, 1)] = 2.0 / (t - b);
+    ortho1[(1, 2)] = 0.0;
+    ortho1[(1, 3)] = 0.0;
+
+    ortho1[(2, 0)] = 0.0;
+    ortho1[(2, 1)] = 0.0;
+    ortho1[(2, 2)] = 2.0 / (z_near - z_far);
+    ortho1[(2, 3)] = 0.0;
+
+    ortho1[(3, 0)] = 0.0;
+    ortho1[(3, 1)] = 0.0;
+    ortho1[(3, 2)] = 0.0;
+    ortho1[(3, 3)] = 1.0;
+
+    let mut ortho2: Matrix4<f64> = Matrix4::identity();
+    ortho2[(0, 0)] = 1.0;
+    ortho2[(0, 1)] = 0.0;
+    ortho2[(0, 2)] = 0.0;
+    ortho2[(0, 3)] = (r + l) / -2.0;
+
+    ortho2[(1, 0)] = 0.0;
+    ortho2[(1, 1)] = 1.0;
+    ortho2[(1, 2)] = 0.0;
+    ortho2[(1, 3)] = (t + b) / -2.0;
+
+    ortho2[(2, 0)] = 0.0;
+    ortho2[(2, 1)] = 0.0;
+    ortho2[(2, 2)] = 1.0;
+    ortho2[(2, 3)] = (z_far + z_near) / -2.0;
+
+    ortho2[(3, 0)] = 0.0;
+    ortho2[(3, 1)] = 0.0;
+    ortho2[(3, 2)] = 0.0;
+    ortho2[(3, 3)] = 1.0;
+
+    jitter = ortho1 * ortho2 * persp;
+
+    jitter[(2, 0)] += halton[offsetval as usize].x * delta_width;
+    jitter[(2, 1)] += halton[offsetval as usize].y * delta_height;
+    
+    jitter
+}
+
 pub fn get_rotation(axis: Vector3<f64>, angle: f64) -> Matrix4<f64> {
     let mut model:Matrix4<f64> = Matrix4::identity();
     
@@ -201,4 +305,18 @@ pub(crate) fn frame_buffer2cv_mat(frame_buffer: &Vec<V3d>) -> opencv::core::Mat 
     image.convert_to(&mut img, opencv::core::CV_8UC3, 1.0, 1.0).expect("panic message");
     cvt_color(&img, &mut image, COLOR_RGB2BGR, 0).unwrap();
     image
+}
+
+pub fn min(x1: f64, x2: f64) -> f64 {
+    if x1 < x2 {
+        return x1
+    }
+    x2
+}
+
+pub fn max(x1: f64, x2: f64) -> f64 {
+    if x1 < x2 {
+        return x2
+    }
+    x1
 }
