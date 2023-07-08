@@ -72,7 +72,7 @@ fn main() {
             angle -= 10.0;
         } 
           else if k == 'r' as i32 {
-            angle_rotation += 20.0;
+            angle_rotation -= 10.0;
           }
         frame_count += 1;
     }

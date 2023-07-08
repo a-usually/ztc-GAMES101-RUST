@@ -175,7 +175,7 @@ impl Rasterizer {
         let buf = &self.pos_buf[&pos_buffer.0];
         let ind: &Vec<Vector3<usize>> = &self.ind_buf[&ind_buffer.0];
 
-        let mvp =  self.projection * self.view * self.model;
+        let mvp =  self.projection * self.view * self.model * self.rotaion ;
 
         for i in ind {
             let t = Rasterizer::get_triangle(self.width, self.height, buf, mvp, i);
