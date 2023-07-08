@@ -76,7 +76,7 @@ impl Rasterizer {
     }
 
     fn set_pixel(&mut self, point: &Vector3<f64>, color: &Vector3<f64>) {
-        let alpha = 0.05;
+        // let alpha = 0.05;
         let ind = (self.height as f64 - 1.0 - point.y) * self.width as f64 + point.x;
         self.frame_buf[ind as usize] = *color;
         // //no color
@@ -188,7 +188,7 @@ impl Rasterizer {
             t.set_color(2, col_z[0], col_z[1], col_z[2]);
 
             self.rasterize_triangle(&t);
-            self.fxaa(&t);
+            //self.fxaa(&t);
         }
     }
 
@@ -360,8 +360,8 @@ impl Rasterizer {
                     color_temp.y = (self.frame_sample[temp1].y + self.frame_sample[temp2].y + self.frame_sample[temp3].y + self.frame_sample[temp4].y) / 4.0;
                     color_temp.z = (self.frame_sample[temp1].z + self.frame_sample[temp2].z + self.frame_sample[temp3].z + self.frame_sample[temp4].z) / 4.0;
 
-                     //self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &color_temp);
-                    self.frame_buf_0[temp] = color_temp;
+                    self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &color_temp);
+                    //self.frame_buf_0[temp] = color_temp;
                 }
             }
         }
