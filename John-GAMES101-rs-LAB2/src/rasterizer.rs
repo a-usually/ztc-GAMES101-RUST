@@ -188,7 +188,7 @@ impl Rasterizer {
             t.set_color(2, col_z[0], col_z[1], col_z[2]);
 
             self.rasterize_triangle(&t);
-            //self.fxaa(&t);
+            self.fxaa(&t);
         }
     }
 
@@ -207,8 +207,8 @@ impl Rasterizer {
                 if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
                     let temp = self.get_index1(x as usize, y as usize).clone();
                     self.depth_buf[temp] = t.v[0].z;
-                    self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
-                    //self.frame_buf_0[temp] = t.get_color().clone();
+                    //self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
+                    self.frame_buf_0[temp] = t.get_color().clone();
                 }
             }
         }
