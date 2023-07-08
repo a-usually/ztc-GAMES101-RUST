@@ -57,8 +57,8 @@ fn main() {
         r.set_model(get_model_matrix(angle));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45.0, 1.0, 0.1, 50.0));
+        r.set_rotation(get_rotation(V3d::new(1.0,2.0, 3.0), angle_rotation));
         r.draw_triangle(pos_id, ind_id, Primitive::Triangle);
-        r.set_rotation(get_rotation(V3d::new(1.0,2.0,3.0), angle_rotation));
 
         let frame_buffer = r.frame_buffer();
         let image = frame_buffer2cv_mat(frame_buffer);
@@ -72,7 +72,7 @@ fn main() {
             angle -= 10.0;
         } 
           else if k == 'r' as i32 {
-            angle_rotation += 15.0;
+            angle_rotation += 20.0;
           }
         frame_count += 1;
     }
