@@ -188,7 +188,7 @@ impl Rasterizer {
             t.set_color(2, col_z[0], col_z[1], col_z[2]);
 
             self.rasterize_triangle(&t);
-            //self.fxaa(&t);
+            self.fxaa(&t);
         }
     }
 
@@ -207,8 +207,8 @@ impl Rasterizer {
                 if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &t.v) && (t.v[0].z < self.depth_buf[self.get_index1(x as usize, y as usize)]) {
                     let temp = self.get_index1(x as usize, y as usize).clone();
                     self.depth_buf[temp] = t.v[0].z;
-                    self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
-                    //self.frame_buf_0[temp] = t.get_color().clone();
+                    //self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &t.get_color());
+                    self.frame_buf_0[temp] = t.get_color().clone();
                 }
             }
         }
@@ -374,43 +374,47 @@ impl Rasterizer {
         let y_min = min(self.height as f64 - 1.0, min(t.v[0].y, min(t.v[1].y, t.v[2].y))) as i32;
         let y_max = min(self.height as f64 - 1.0, max(t.v[0].y, max(t.v[1].y, t.v[2].y))) as i32;
 
-        let abs_lumn = 0.005;
-            let relative_lumn = 0.0001;
+        let abs_lumn = 0.05;
+            let relative_lumn = 0.001;
             let lumn = Vector3::new(0.299, 0.587, 0.114);//change function
             for x in x_min..= x_max {
                 for y in y_min..= y_max {
-                    let temp = self.get_index1(x as usize, y as usize).clone();
-                    let temp1 = if y + 1 <= self.height as i32 - 1 {
-                        self.get_index1(x as usize, (y as f64 + 1.0) as usize).clone()
-                    }
-                    else {
-                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
-                        continue
-                    };
+                    let temp = self.get_index1(x as usize, y as usize);
+                    let temp1 = self.get_index1(x as usize, (y as f64 + 1.0) as usize);
+                    let temp2 = self.get_index1((x as f64 + 1.0) as usize, y as usize);
+                    let temp3 = self.get_index1(x as usize, (y as f64 - 1.0) as usize);
+                    let temp4 = self.get_index1(x as usize, (y as f64 - 1.0) as usize);
+                    // let temp1 = if y + 1 <= self.height as i32 - 1 {
+                    //     self.get_index1(x as usize, (y as f64 + 1.0) as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-                    let temp2 = if x + 1 <= self.width as i32 -1 {
-                        self.get_index1((x as f64 + 1.0) as usize, y as usize).clone()
-                    }
-                    else {
-                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
-                        continue
-                    };
+                    // let temp2 = if x + 1 <= self.width as i32 -1 {
+                    //     self.get_index1((x as f64 + 1.0) as usize, y as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-                    let temp3 = if y - 1 >= 0 {
-                        self.get_index1(x as usize, (y as f64 - 1.0) as usize).clone()
-                    }
-                    else {
-                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
-                        continue
-                    };
+                    // let temp3 = if y - 1 >= 0 {
+                    //     self.get_index1(x as usize, (y as f64 - 1.0) as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
 
-                    let temp4 = if x - 1 >= 0 {
-                        self.get_index1((x as f64 - 1.0) as usize, y as usize).clone()
-                    }
-                    else {
-                        self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
-                        continue
-                    };
+                    // let temp4 = if x - 1 >= 0 {
+                    //     self.get_index1((x as f64 - 1.0) as usize, y as usize).clone()
+                    // }
+                    // else {
+                    //     self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0), &self.frame_buf_0[temp].clone());
+                    //     continue
+                    // };
                     //coordinate
 
                     let n_rgb = self.frame_buf_0[temp1];
@@ -459,17 +463,21 @@ impl Rasterizer {
                         }
                         else {
                             let modify = lumn_ml / lumncompare;
-                            let x_1 = x as f64 + modify * normal.x;
-                            let y_1 = y as f64 + modify * normal.y;
-                            let x_0 = min(x_1, self.width as f64 - 1.0) as usize;
-                            let y_0 = min(y_1, self.height as f64 -1.0) as usize;
+                            let x_1 = x as f64 + normal.x;
+                            let y_1 = y as f64 + normal.y;
+                            let x_0 = max(min(x_1, self.width as f64 - 1.0), 0.0) as usize;
+                            let y_0 = max(min(y_1, self.height as f64 -1.0), 0.0) as usize;
                             let temp_00 = self.get_index1(x_0, y_0);
 
-                            let alpha = ((x_1 - x_0 as f64) * (x_1 - x_0 as f64) + (y_1 - y_0 as f64) * (y_1 - y_0 as f64)).sqrt();//the ratio
+                            //let alpha = ((x_1 - x_0 as f64) * (x_1 - x_0 as f64) + (y_1 - y_0 as f64) * (y_1 - y_0 as f64)).sqrt();//the ratio
                             let mut color1: Vector3<f64> = Vector3::new(0.0, 0.0, 0.0);
-                            color1.x = self.frame_buf_0[temp].x * alpha + self.frame_buf_0[temp_00].x * (1.0 - alpha);
-                            color1.y = self.frame_buf_0[temp].y * alpha + self.frame_buf_0[temp_00].y * (1.0 - alpha);
-                            color1.z = self.frame_buf_0[temp].z * alpha + self.frame_buf_0[temp_00].z * (1.0 - alpha);
+                            color1.x = self.frame_buf_0[temp].x * (1.0 - modify) + self.frame_buf_0[temp_00].x * (modify);
+                            color1.y = self.frame_buf_0[temp].y * (1.0 - modify) + self.frame_buf_0[temp_00].y * (modify);
+                            color1.z = self.frame_buf_0[temp].z * (1.0 - modify) + self.frame_buf_0[temp_00].z * (modify);
+
+                            // color1.x = self.frame_buf_0[temp].x * (1.0 - alpha) + self.frame_buf_0[temp_00].x * alpha;
+                            // color1.y = self.frame_buf_0[temp].y * (1.0 - alpha) + self.frame_buf_0[temp_00].y * alpha;
+                            // color1.z = self.frame_buf_0[temp].z * (1.0 - alpha) + self.frame_buf_0[temp_00].z * alpha;
 
                             self.set_pixel(&Vector3::new(x as f64, y as f64, 0.0),&color1);
                         }
