@@ -138,6 +138,7 @@ impl Rasterizer {
                     Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &self.fragment_shader.unwrap()(&temp_0));
                     //Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &(temp_color * 255.0));
                     //self.frame_buf_0[temp] = t.get_color().clone();
+                    //
                 }
             }
         }
