@@ -1,9 +1,11 @@
 use std::rc::Rc;
 
 use nalgebra::{Matrix4, Vector2, Vector3, Vector4};
+use opencv::prelude::{FacemarkAAM_ModelTraitConst, FacemarkAAM_ParamsTraitConst};
 use crate::shader::{FragmentShaderPayload, VertexShaderPayload};
 use crate::texture::Texture;
-use crate::triangle::Triangle;
+use crate::triangle::{Triangle, self};
+use crate::utils::{min, max};
 
 #[allow(dead_code)]
 pub enum Buffer {
@@ -53,8 +55,12 @@ impl Rasterizer {
         r
     }
 
-    fn get_index(height: u64, width: u64, x: usize, y: usize) -> usize {
+    pub fn get_index1(height: u64, width: u64, x: usize, y: usize) -> usize {
         ((height - 1 - y as u64) * width + x as u64) as usize
+    }
+
+    pub fn get_index2(height: u64, width: u64, x: usize, y: usize) -> usize {
+        ((height * 2 - 1 - y as u64) * width * 2 + x as u64) as usize
     }
 
     fn set_pixel(height: u64, width: u64, frame_buf: &mut Vec<Vector3<f64>>, point: &Vector3<f64>, color: &Vector3<f64>) {
@@ -109,14 +115,38 @@ impl Rasterizer {
 
     pub fn rasterize_triangle(&mut self, triangle: &Triangle, mvp: Matrix4<f64>) {
         /*  Implement your code here  */
+        let (new_tri, view_space_pos) = Self::get_new_tri(triangle, self.view, self.model, mvp,(self.width, self.height));
 
+        let x_min = min(self.width as f64 - 1.0, min(new_tri.v[0].x, min(new_tri.v[1].x, new_tri.v[2].x))) as i32;
+        let x_max = min(self.width as f64 - 1.0, max(new_tri.v[0].x, max(new_tri.v[1].x, new_tri.v[2].x))) as i32;
+        let y_min = min(self.height as f64 - 1.0, min(new_tri.v[0].y, min(new_tri.v[1].y, new_tri.v[2].y))) as i32;
+        let y_max = min(self.height as f64 - 1.0, max(new_tri.v[0].y, max(new_tri.v[1].y, new_tri.v[2].y))) as i32;
 
+        for x in x_min..= x_max {
+            for y in y_min..= y_max {
+                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &new_tri.v) && (new_tri.v[0].z <= self.depth_buf[Self::get_index1(self.height, self.width, x as usize, y as usize)]) {
+                    let (a, b, c) = compute_barycentric2d_1(x as f64, y as f64, &new_tri.v);
+                    let temp = Self::get_index1(self.height, self.width, x as usize, y as usize).clone();
+                    self.depth_buf[temp] = new_tri.v[0].z;
+
+                    let temp_color = Self::interpolate_vec3(a, b, c, new_tri.color[0], new_tri.color[1], new_tri.color[2],  1.0);
+                    let temp_normal = Self::interpolate_vec3(a, b, c, new_tri.normal[0], new_tri.normal[1], new_tri.normal[2], 1.0);
+                    let temp_texcoord = Self::interpolate_vec2(a, b, c, new_tri.tex_coords[0], new_tri.tex_coords[1], new_tri.tex_coords[2], 1.0);
+                    let temp_tex = self.texture.clone().unwrap();
+
+                    let temp_0 = FragmentShaderPayload::new(&temp_color, &temp_normal, &temp_texcoord, Some(Rc::new(&temp_tex)));
+                    Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &self.fragment_shader.unwrap()(&temp_0));
+                    //Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &(temp_color * 255.0));
+                    //self.frame_buf_0[temp] = t.get_color().clone();
+                }
+            }
+        }
     }
     
-    fn interpolate_Vec3(a: f64, b: f64, c: f64, vert1: Vector3<f64>, vert2: Vector3<f64>, vert3: Vector3<f64>, weight: f64) -> Vector3<f64> {
+    pub fn interpolate_vec3(a: f64, b: f64, c: f64, vert1: Vector3<f64>, vert2: Vector3<f64>, vert3: Vector3<f64>, weight: f64) -> Vector3<f64> {
         (a * vert1 + b * vert2 + c * vert3) / weight
     }
-    fn interpolate_Vec2(a: f64, b: f64, c: f64, vert1: Vector2<f64>, vert2: Vector2<f64>, vert3: Vector2<f64>, weight: f64) -> Vector2<f64> {
+    pub fn interpolate_vec2(a: f64, b: f64, c: f64, vert1: Vector2<f64>, vert2: Vector2<f64>, vert3: Vector2<f64>, weight: f64) -> Vector2<f64> {
         (a * vert1 + b * vert2 + c * vert3) / weight
     }
 
@@ -187,7 +217,14 @@ fn inside_triangle(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> bool {
     }
 }
 
-fn compute_barycentric2d(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> (f64, f64, f64) {
+fn compute_barycentric2d_1(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> (f64, f64, f64) {
+    let c1 = (x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * y + v[1].x * v[2].y - v[2].x * v[1].y) / (v[0].x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * v[0].y + v[1].x * v[2].y - v[2].x * v[1].y);
+    let c2 = (x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * y + v[2].x * v[0].y - v[0].x * v[2].y) / (v[1].x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * v[1].y + v[2].x * v[0].y - v[0].x * v[2].y);
+    let c3 = (x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * y + v[0].x * v[1].y - v[1].x * v[0].y) / (v[2].x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * v[2].y + v[0].x * v[1].y - v[1].x * v[0].y);
+    (c1, c2, c3)
+}
+
+fn compute_barycentric2d_2(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f64) {
     let c1 = (x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * y + v[1].x * v[2].y - v[2].x * v[1].y) / (v[0].x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * v[0].y + v[1].x * v[2].y - v[2].x * v[1].y);
     let c2 = (x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * y + v[2].x * v[0].y - v[0].x * v[2].y) / (v[1].x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * v[1].y + v[2].x * v[0].y - v[0].x * v[2].y);
     let c3 = (x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * y + v[0].x * v[1].y - v[1].x * v[0].y) / (v[2].x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * v[2].y + v[0].x * v[1].y - v[1].x * v[0].y);
