@@ -36,6 +36,76 @@ pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64
     let mut persp2ortho: M4f = Matrix4::zeros();
     /*  Implement your code here  */
 
+    let t = -z_near * (eye_fov / 2.0).tan();
+    let r = t * aspect_ratio;
+    let l = -r;
+    let b = -t;
+
+    let mut persp: Matrix4<f64> = Matrix4::identity();
+    persp[(0, 0)] = z_near;
+    persp[(0, 1)] = 0.0;
+    persp[(0, 2)] = 0.0;
+    persp[(0, 3)] = 0.0;
+
+    persp[(1, 0)] = 0.0;
+    persp[(1, 1)] = z_near;
+    persp[(1, 2)] = 0.0;
+    persp[(1, 3)] = 0.0;
+
+    persp[(2, 0)] = 0.0;
+    persp[(2, 1)] = 0.0;
+    persp[(2, 2)] = z_near + z_far;
+    persp[(2, 3)] = -z_far * z_near;
+
+    persp[(3, 0)] = 0.0;
+    persp[(3, 1)] = 0.0;
+    persp[(3, 2)] = 1.0;
+    persp[(3, 3)] = 0.0;
+
+    let mut ortho1: Matrix4<f64> = Matrix4::identity();
+    ortho1[(0, 0)] = 2.0 / (r - l);
+    ortho1[(0, 1)] = 0.0;
+    ortho1[(0, 2)] = 0.0;
+    ortho1[(0, 3)] = 0.0;
+
+    ortho1[(1, 0)] = 0.0;
+    ortho1[(1, 1)] = 2.0 / (t - b);
+    ortho1[(1, 2)] = 0.0;
+    ortho1[(1, 3)] = 0.0;
+
+    ortho1[(2, 0)] = 0.0;
+    ortho1[(2, 1)] = 0.0;
+    ortho1[(2, 2)] = 2.0 / (z_near - z_far);
+    ortho1[(2, 3)] = 0.0;
+
+    ortho1[(3, 0)] = 0.0;
+    ortho1[(3, 1)] = 0.0;
+    ortho1[(3, 2)] = 0.0;
+    ortho1[(3, 3)] = 1.0;
+
+    let mut ortho2: Matrix4<f64> = Matrix4::identity();
+    ortho2[(0, 0)] = 1.0;
+    ortho2[(0, 1)] = 0.0;
+    ortho2[(0, 2)] = 0.0;
+    ortho2[(0, 3)] = (r + l) / -2.0;
+
+    ortho2[(1, 0)] = 0.0;
+    ortho2[(1, 1)] = 1.0;
+    ortho2[(1, 2)] = 0.0;
+    ortho2[(1, 3)] = (t + b) / -2.0;
+
+    ortho2[(2, 0)] = 0.0;
+    ortho2[(2, 1)] = 0.0;
+    ortho2[(2, 2)] = 1.0;
+    ortho2[(2, 3)] = (z_far + z_near) / -2.0;
+
+    ortho2[(3, 0)] = 0.0;
+    ortho2[(3, 1)] = 0.0;
+    ortho2[(3, 2)] = 0.0;
+    ortho2[(3, 3)] = 1.0;
+
+    persp2ortho = ortho1 * ortho2 * persp;
+
     persp2ortho
 }
 
@@ -285,4 +355,19 @@ pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     }
 
     result_color * 255.0
+}
+
+
+pub fn min(x1: f64, x2: f64) -> f64 {
+    if x1 < x2 {
+        return x1
+    }
+    x2
+}
+
+pub fn max(x1: f64, x2: f64) -> f64 {
+    if x1 < x2 {
+        return x2
+    }
+    x1
 }
