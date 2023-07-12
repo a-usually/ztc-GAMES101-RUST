@@ -46,7 +46,6 @@ fn main() -> Result<()> {
     r.set_vertex_shader(vertex_shader);
     r.set_fragment_shader(active_shader);
 
-
     r.clear(Buffer::Both);
     r.set_model(get_model_matrix(angle));
     r.set_view(get_view_matrix(eye_pos));

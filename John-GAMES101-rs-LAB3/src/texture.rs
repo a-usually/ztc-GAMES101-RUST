@@ -2,6 +2,7 @@ use nalgebra::{Vector3};
 use opencv::core::{MatTraitConst, VecN};
 use opencv::imgcodecs::{imread, IMREAD_COLOR};
 
+#[derive(Clone)]
 pub struct Texture {
     pub img_data: opencv::core::Mat,
     pub width: usize,
@@ -28,6 +29,7 @@ impl Texture {
 
         let u_img = u * self.width as f64;
         let v_img = (1.0 - v) * self.height as f64;
+
         let color: &VecN<u8, 3> = self.img_data.at_2d(v_img as i32, u_img as i32).unwrap();
 
         Vector3::new(color[2] as f64, color[1] as f64, color[0] as f64)

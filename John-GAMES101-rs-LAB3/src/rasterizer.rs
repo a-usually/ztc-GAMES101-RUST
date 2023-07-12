@@ -125,7 +125,7 @@ impl Rasterizer {
         for x in x_min..= x_max {
             for y in y_min..= y_max {
                 if inside_triangle(x as f64 + 0.5, y as f64 + 0.5, &new_tri.v) && (new_tri.v[0].z <= self.depth_buf[Self::get_index1(self.height, self.width, x as usize, y as usize)]) {
-                    let (a, b, c) = compute_barycentric2d_1(x as f64, y as f64, &new_tri.v);
+                    let (a, b, c) = compute_barycentric2d_1(x as f64 + 0.5, y as f64 + 0.5, &new_tri.v);
                     let temp = Self::get_index1(self.height, self.width, x as usize, y as usize).clone();
                     self.depth_buf[temp] = new_tri.v[0].z;
 
@@ -134,7 +134,9 @@ impl Rasterizer {
                     let temp_texcoord = Self::interpolate_vec2(a, b, c, new_tri.tex_coords[0], new_tri.tex_coords[1], new_tri.tex_coords[2], 1.0);
                     let temp_tex = self.texture.clone().unwrap();
 
-                    let temp_0 = FragmentShaderPayload::new(&temp_color, &temp_normal, &temp_texcoord, Some(Rc::new(&temp_tex)));
+                    let mut temp_0 = FragmentShaderPayload::new(&temp_color, &temp_normal, &temp_texcoord, Some(Rc::new(&temp_tex)));
+                    temp_0.view_pos = Self::interpolate_vec3(a, b, c, view_space_pos[0], view_space_pos[1], view_space_pos[2], 1.0);
+                    
                     Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &self.fragment_shader.unwrap()(&temp_0));
                     //Self::set_pixel(self.height, self.width, &mut self.frame_buf, &Vector3::new(x as f64, y as f64, 0.0), &(temp_color * 255.0));
                     //self.frame_buf_0[temp] = t.get_color().clone();

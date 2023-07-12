@@ -1,5 +1,5 @@
 use std::os::raw::c_void;
-use nalgebra::{Matrix3, Matrix4, Vector3, Vector4, ComplexField};
+use nalgebra::{Matrix3, Matrix4, Vector2, Vector3, Vector4, ComplexField};
 use opencv::core::{Mat, MatTraitConst};
 use opencv::imgproc::{COLOR_RGB2BGR, cvt_color};
 use opencv::stitching::Detail_CameraParamsTraitConst;
@@ -251,7 +251,8 @@ pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
         // TODO: Get the texture value at the texture coordinates of the current fragment
         // <获取材质颜色信息>
         None => Vector3::new(0.0, 0.0, 0.0),
-        Some(texture) => payload.color, // Do modification here
+
+        Some(texture) => texture.get_color(payload.tex_coords.x, payload.tex_coords.y), // Do modification here
     };
     let kd = texture_color / 255.0; // 材质颜色影响漫反射系数
     let ks = Vector3::new(0.7937, 0.7937, 0.7937);
@@ -272,25 +273,28 @@ pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
 
     let color = texture_color;
     let point = payload.view_pos;
-    let normal = payload.normal;
+    let normal = payload.normal / length(payload.normal);
+
 
     let mut result_color = Vector3::zeros();
 
-    // let v = (eye_pos - point);
+    let v = (eye_pos - point) / length(eye_pos - point);
     for light in lights {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular* 
         // components are. Then, accumulate that result on the *result_color* object.
-    //     let half_vec = (v + light.intensity) / length(v + light.intensity);
+        let r = length(light.position - point);
 
-    //     let r = length(light.position - point);
-    //    // let i = length(light.intensity);
+        let l = (light.position - point) / length(light.position - point);
 
-    //     let ld:V3f = elemul(kd, light.intensity) / r / r * max(0.0, normal.dot(&light.position));
-    //     let ls:V3f = elemul(ks, light.intensity) / r / r * max(0.0, normal.dot(&half_vec)).powf(p);
-    //     let la:V3f = elemul(ka, amb_light_intensity);
+        let half_vec = (v + l) / length(v + l);
+       // let i = length(light.intensity);
 
-    //     // println!("ld = {}", length(result_color));
-    //     result_color = result_color + ld + ls + la;
+        let ld:V3f = elemul(kd, light.intensity) / r / r * max(0.0, normal.dot(&l));
+        let ls:V3f = elemul(ks, light.intensity) / r / r * max(0.0, normal.dot(&half_vec)).powf(p);
+        let la:V3f = elemul(ka, amb_light_intensity);
+
+        //println!("ld = {}", length(result_color));
+        result_color = result_color + ld + ls + la;
     }
 
     result_color * 255.0
@@ -315,21 +319,40 @@ pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
 
     let p = 150.0;
 
-    let normal = payload.normal;
+    let mut normal = payload.normal;
     let point = payload.view_pos;
     let color = payload.color;
 
     let (kh, kn) = (0.2, 0.1);
 
     // TODO: Implement bump mapping here
-    // Let n = normal = (x, y, z)
-    // Vector t = (x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z))
+    //Let n = normal = (x, y, z)
+    //Vector t = (x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z))
+    let t:Vector3<f64> = Vector3::new(
+        normal.x * normal.y / (normal.x * normal.x + normal.z * normal.z).sqrt(), 
+        (normal.x * normal.x + normal.z * normal.z).sqrt(), 
+    normal.z * normal.y / (normal.x * normal.x + normal.z * normal.z).sqrt());
+    
     // Vector b = n cross product t
+    let b = normal.cross(&t);
+    
     // Matrix TBN = [t b n]
-    // dU = kh * kn * (h(u+1/w,v)-h(u,v))
+    let TBN = Matrix3::new(t.x, b.x, normal.x, t.y, b.y, normal.y, t.z, b.z, normal.z);
+
     // dV = kh * kn * (h(u,v+1/h)-h(u,v))
+    let u = payload.tex_coords.x;
+    let v = payload.tex_coords.y;
+    let texture = payload.texture.as_ref().unwrap();
+    let w = texture.width as f64;
+    let h = texture.height as f64;
+    let du = kh * kn * (texture.get_color(u + 1.0 / w, v).norm() - texture.get_color(u, v).norm());
+    let dv = kh * kn * (texture.get_color(u, v + 1.0 / h).norm() - texture.get_color(u, v).norm());
+    
     // Vector ln = (-dU, -dV, 1)
+    let ln = Vector3::new(-du, -dv, 1.0);
+
     // Normal n = normalize(TBN * ln)
+    normal = (TBN * ln) / length(TBN * ln);
 
     let mut result_color = Vector3::zeros();
     result_color = normal;
@@ -356,28 +379,64 @@ pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
 
     let p = 150.0;
 
-    let normal = payload.normal;
-    let point = payload.view_pos;
+    let mut normal = payload.normal / length(payload.normal);
+    let mut point = payload.view_pos;
     let color = payload.color;
 
     let (kh, kn) = (0.2, 0.1);
 
     // TODO: Implement displacement mapping here
-    // Let n = normal = (x, y, z)
-    // Vector t = (x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z))
+
+     //Let n = normal = (x, y, z)
+    //Vector t = (x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z))
+    let t:Vector3<f64> = Vector3::new(
+        normal.x * normal.y / (normal.x * normal.x + normal.z * normal.z).sqrt(), 
+        (normal.x * normal.x + normal.z * normal.z).sqrt(), 
+    normal.z * normal.y / (normal.x * normal.x + normal.z * normal.z).sqrt());
+    
     // Vector b = n cross product t
+    let b = normal.cross(&t);
+    
     // Matrix TBN = [t b n]
-    // dU = kh * kn * (h(u+1/w,v)-h(u,v))
+    let TBN = Matrix3::new(t.x, b.x, normal.x, t.y, b.y, normal.y, t.z, b.z, normal.z);
+
     // dV = kh * kn * (h(u,v+1/h)-h(u,v))
+    let u = payload.tex_coords.x;
+    let v = payload.tex_coords.y;
+    let texture = payload.texture.as_ref().unwrap();
+    let w = texture.width as f64;
+    let h = texture.height as f64;
+    let du = kh * kn * (texture.get_color(u + 1.0 / w, v).norm() - texture.get_color(u, v).norm());
+    let dv = kh * kn * (texture.get_color(u, v + 1.0 / h).norm() - texture.get_color(u, v).norm());
+    
     // Vector ln = (-dU, -dV, 1)
+    let ln = Vector3::new(-du, -dv, 1.0);
+    
     // Position p = p + kn * n * h(u,v)
+    point = point + kn * normal * texture.get_color(u, v).norm();
+
     // Normal n = normalize(TBN * ln)
+    normal = (TBN * ln) / length(TBN * ln);
+
+    let v = (eye_pos - point) / length(eye_pos - point);
 
     let mut result_color = Vector3::zeros();
     for light in lights {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular* 
         // components are. Then, accumulate that result on the *result_color* object.
-        
+        let r = length(light.position - point);
+
+        let l = (light.position - point) / length(light.position - point);
+
+        let half_vec = (v + l) / length(v + l);
+       // let i = length(light.intensity);
+
+        let ld:V3f = elemul(kd, light.intensity) / r / r * max(0.0, normal.dot(&l));
+        let ls:V3f = elemul(ks, light.intensity) / r / r * max(0.0, normal.dot(&half_vec)).powf(p);
+        let la:V3f = elemul(ka, amb_light_intensity);
+
+        //println!("ld = {}", length(result_color));
+        result_color = result_color + ld + ls + la;
     }
 
     result_color * 255.0
