@@ -36,6 +36,7 @@ pub(crate) fn get_model_matrix(rotation_angle: f64) -> M4f {
 
 pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64, z_far: f64) -> M4f {
     let mut persp2ortho: M4f = Matrix4::zeros();
+    let eye_fov = eye_fov.to_radians();
     /*  Implement your code here  */
 
     let t = -z_near * (eye_fov / 2.0).tan();
@@ -252,7 +253,7 @@ pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
         // <获取材质颜色信息>
         None => Vector3::new(0.0, 0.0, 0.0),
 
-        Some(texture) => texture.get_color(payload.tex_coords.x, payload.tex_coords.y), // Do modification here
+        Some(texture) => texture.getColorBilinear(payload.tex_coords.x, payload.tex_coords.y), // Do modification here
     };
     let kd = texture_color / 255.0; // 材质颜色影响漫反射系数
     let ks = Vector3::new(0.7937, 0.7937, 0.7937);
@@ -345,8 +346,8 @@ pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let texture = payload.texture.as_ref().unwrap();
     let w = texture.width as f64;
     let h = texture.height as f64;
-    let du = kh * kn * (texture.get_color(u + 1.0 / w, v).norm() - texture.get_color(u, v).norm());
-    let dv = kh * kn * (texture.get_color(u, v + 1.0 / h).norm() - texture.get_color(u, v).norm());
+    let du = kh * kn * (texture.getColorBilinear(u + 1.0 / w, v).norm() - texture.getColorBilinear(u, v).norm());
+    let dv = kh * kn * (texture.getColorBilinear(u, v + 1.0 / h).norm() - texture.getColorBilinear(u, v).norm());
     
     // Vector ln = (-dU, -dV, 1)
     let ln = Vector3::new(-du, -dv, 1.0);
@@ -406,15 +407,15 @@ pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let texture = payload.texture.as_ref().unwrap();
     let w = texture.width as f64;
     let h = texture.height as f64;
-    let du = kh * kn * (texture.get_color(u + 1.0 / w, v).norm() - texture.get_color(u, v).norm());
-    let dv = kh * kn * (texture.get_color(u, v + 1.0 / h).norm() - texture.get_color(u, v).norm());
+    let du = kh * kn * (texture.getColorBilinear(u + 1.0 / w, v).norm() - texture.getColorBilinear(u, v).norm());
+    let dv = kh * kn * (texture.getColorBilinear(u, v + 1.0 / h).norm() - texture.getColorBilinear(u, v).norm());
     
     // Vector ln = (-dU, -dV, 1)
     let ln = Vector3::new(-du, -dv, 1.0);
     
     // Position p = p + kn * n * h(u,v)
-    point = point + kn * normal * texture.get_color(u, v).norm();
-    
+    point = point + kn * normal * texture.getColorBilinear(u, v).norm();
+
 
     // Normal n = normalize(TBN * ln)
     normal = (TBN * ln) / length(TBN * ln);
