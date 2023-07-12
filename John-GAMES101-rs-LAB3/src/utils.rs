@@ -414,6 +414,7 @@ pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     
     // Position p = p + kn * n * h(u,v)
     point = point + kn * normal * texture.get_color(u, v).norm();
+    
 
     // Normal n = normalize(TBN * ln)
     normal = (TBN * ln) / length(TBN * ln);
