@@ -319,7 +319,7 @@ pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
 
     let p = 150.0;
 
-    let mut normal = payload.normal;
+    let mut normal = payload.normal / length(payload.normal);
     let point = payload.view_pos;
     let color = payload.color;
 
